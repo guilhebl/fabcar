@@ -16,10 +16,80 @@ import (
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	sc "github.com/hyperledger/fabric/protos/peer"
+	"time"
 )
+
+// sample Id generator starts at 4
+var id = 0
+var partId = 0
+
+// returns the next CAR ID
+func NextId() string {
+	id++
+	return fmt.Sprintf("CAR%s", strconv.Itoa(id))
+}
+
+// returns the next CAR PART ID
+func NextPartId() string {
+	partId++
+	return fmt.Sprintf("PRT%s", strconv.Itoa(partId))
+}
 
 // Define the Smart Contract structure
 type SmartContract struct {
+}
+
+
+// Define the car structure.  Structure tags are used by encoding/json library
+type Car struct {
+	Id      string    `json:"id"`
+	Make    string    `json:"make"`
+	Model   string    `json:"model"`
+	MaxSpeed int 	  `json:"maxSpeed"`
+	Colour  string    `json:"colour"`
+	Owner   string    `json:"owner"`
+	Created time.Time `json:"created"`
+	Parts   []CarPart `json:"parts"`
+}
+
+// A car part is part of a car and
+type CarPart struct {
+	Id       string    `json:"id"`
+	ParentId string    `json:"parentId"`
+	Model    string    `json:"model"`
+	Created  time.Time `json:"created"`
+}
+
+func NewCar(makeCar, model, color, owner string, maxSpeed int, parts ...string) *Car {
+	idStr := NextId()
+
+	p := make([]CarPart, 0)
+	for i := 0; i < len(parts); i++ {
+		part := NewCarPart(parts[i], idStr)
+		p = append(p, *part)
+	}
+
+	return &Car{
+		Id:      idStr,
+		Make:    makeCar,
+		Model:   model,
+		Colour:  color,
+		MaxSpeed: maxSpeed,
+		Owner:   owner,
+		Created: time.Now(),
+		Parts:   p,
+	}
+}
+
+func NewCarPart(model, parentId string) *CarPart {
+	idStr := NextPartId()
+
+	return &CarPart{
+		Id:       idStr,
+		Model:    model,
+		ParentId: parentId,
+		Created:  time.Now(),
+	}
 }
 
 /*
@@ -49,6 +119,8 @@ func (s *SmartContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response 
 		return s.queryAllCars(APIstub)
 	} else if function == "changeCarOwner" {
 		return s.changeCarOwner(APIstub, args)
+	} else if function == "addCarPart" {
+		return s.addCarPart(APIstub, args)
 	}
 
 	return shim.Error("Invalid Smart Contract function name.")
@@ -67,18 +139,17 @@ func (s *SmartContract) queryCar(APIstub shim.ChaincodeStubInterface, args []str
 // builds initial state
 func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Response {
 	cars := make([]Car, 0)
-	car1 := NewCar("Toyota", "Prius", "blue", "Tomoko", "T Engine 1", "Pirelli Tire F51", "Jetsys Air System T159")
+	car1 := NewCar("Toyota", "Prius", "blue", "Tomoko", 200,"T Engine 1", "Pirelli Tire F51", "Jetsys Air System T159")
 	cars = append(cars, *car1)
-	car2 := NewCar("Ford", "Mustang", "red", "Brad", "Ford Duratec V6", "Michellini Tire F52", "Jaguar Air System T200")
+	car2 := NewCar("Ford", "Mustang", "red", "Brad", 250, "Ford Duratec V6", "Michellini Tire F52", "Jaguar Air System T200")
 	cars = append(cars, *car2)
-	car3 := NewCar("Volkswagen", "Passat", "yellow", "Max", "AJ V8", "Michellini Tire F45", "Jamex Air System S120")
+	car3 := NewCar("Volkswagen", "Passat", "yellow", "Max", 220,"AJ V8", "Michellini Tire F45", "Jamex Air System S120")
 	cars = append(cars, *car3)
 
 	i := 0
 	for i < len(cars) {
-		fmt.Println("i is ", i)
 		carAsBytes, _ := json.Marshal(cars[i])
-		APIstub.PutState("CAR"+strconv.Itoa(i), carAsBytes)
+		APIstub.PutState(cars[i].Id, carAsBytes)
 		fmt.Println("Added", cars[i])
 		i = i + 1
 	}
@@ -92,17 +163,16 @@ func (s *SmartContract) createCar(APIstub shim.ChaincodeStubInterface, args []st
 		return shim.Error("Incorrect number of arguments. Expecting 5")
 	}
 
-	// var car = Car{Make: args[1], Model: args[2], Colour: args[3], Owner: args[4]}
-	// func NewCar(make, model, color, owner string, parts... string) *Car {
-	make := args[1]
-	model := args[2]
-	color := args[3]
-	owner := args[4]
+	mk := args[0]
+	model := args[1]
+	color := args[2]
+	owner := args[3]
+	maxSpeed, _ := strconv.Atoi(args[4])
 
-	car := NewCar(make, model, color, owner)
+	car := NewCar(mk, model, color, owner, maxSpeed)
 
 	carAsBytes, _ := json.Marshal(car)
-	APIstub.PutState(args[0], carAsBytes)
+	APIstub.PutState(car.Id, carAsBytes)
 
 	return shim.Success(nil)
 }
