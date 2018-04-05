@@ -81,7 +81,7 @@ func NewCar(makeCar, model, color, owner string, maxSpeed int, parts ...string) 
 	}
 }
 
-func NewCarPart(model, parentId string) *CarPart {
+func NewCarPart(parentId, model string) *CarPart {
 	idStr := NextPartId()
 
 	return &CarPart{
@@ -174,7 +174,7 @@ func (s *SmartContract) createCar(APIstub shim.ChaincodeStubInterface, args []st
 	carAsBytes, _ := json.Marshal(car)
 	APIstub.PutState(car.Id, carAsBytes)
 
-	return shim.Success(nil)
+	return shim.Success(carAsBytes)
 }
 
 func (s *SmartContract) queryAllCars(APIstub shim.ChaincodeStubInterface) sc.Response {
@@ -235,7 +235,7 @@ func (s *SmartContract) changeCarOwner(APIstub shim.ChaincodeStubInterface, args
 	carAsBytes, _ = json.Marshal(car)
 	APIstub.PutState(args[0], carAsBytes)
 
-	return shim.Success(nil)
+	return shim.Success(carAsBytes)
 }
 
 // adds a new part to a car - called by parts service
@@ -262,7 +262,7 @@ func (s *SmartContract) addCarPart(APIstub shim.ChaincodeStubInterface, args []s
 	carAsBytes, _ = json.Marshal(car)
 	APIstub.PutState(carId, carAsBytes)
 
-	return shim.Success(nil)
+	return shim.Success(carAsBytes)
 }
 
 // The main function is only relevant in unit test mode. Only included here for completeness.
