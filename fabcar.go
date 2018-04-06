@@ -235,7 +235,7 @@ func (s *SmartContract) changeCarOwner(APIstub shim.ChaincodeStubInterface, args
 	carAsBytes, _ = json.Marshal(car)
 	APIstub.PutState(args[0], carAsBytes)
 
-	return shim.Success(carAsBytes)
+	return shim.Success(nil)
 }
 
 // adds a new part to a car - called by parts service
@@ -262,7 +262,7 @@ func (s *SmartContract) addCarPart(APIstub shim.ChaincodeStubInterface, args []s
 	carAsBytes, _ = json.Marshal(car)
 	APIstub.PutState(carId, carAsBytes)
 
-	return shim.Success(carAsBytes)
+	return shim.Success(nil)
 }
 
 // The main function is only relevant in unit test mode. Only included here for completeness.
